@@ -1,0 +1,43 @@
+<component-set>
+    <components>
+        <component>
+            <role>org.apache.maven.project.packaging.Packaging</role>
+            <role-hint>luna-plugin</role-hint>
+            <implementation>org.apache.maven.project.packaging.DefaultPackaging</implementation>
+            <requirements>
+                <requirement>
+                    <field-name>lifecycleMapping</field-name>
+                    <role>org.apache.maven.lifecycle.mapping.LifecycleMapping</role>
+                    <role-hint>luna-plugin</role-hint>
+                </requirement>
+            </requirements>
+        </component>
+
+        <component>
+            <role>org.apache.maven.lifecycle.mapping.LifecycleMapping</role>
+            <role-hint>luna-plugin</role-hint>
+            <implementation>org.apache.maven.lifecycle.mapping.DefaultLifecycleMapping</implementation>
+            <configuration>
+                <lifecycles>
+                    <lifecycle>
+                        <id>default</id>
+                        <phases>
+                            <process-resources>
+                                org.apache.maven.plugins:maven-resources-plugin:3.4.0:resources,
+                                ru.slie.luna.maven:luna-maven-plugin:process
+                            </process-resources>
+                            <compile>
+                                org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile,
+                                ru.slie.luna.maven:luna-maven-plugin:validate
+                            </compile>
+                            <package>ru.slie.luna.maven:luna-maven-plugin:luna-package</package>
+                            <install>org.apache.maven.plugins:maven-install-plugin:3.1.4:install</install>
+                        </phases>
+                    </lifecycle>
+                </lifecycles>
+            </configuration>
+        </component>
+
+    </components>
+</component-set>
+
