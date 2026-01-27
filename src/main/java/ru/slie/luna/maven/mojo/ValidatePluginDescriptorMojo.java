@@ -46,6 +46,24 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
+    private void validateRest(PluginDescriptor.Rest rest) throws MojoExecutionException {
+        if (rest.getName() == null || rest.getName().trim().isEmpty()) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.rest.name_is_undefined"));
+        }
+
+
+        if (rest.getPackages() == null || rest.getPackages().isEmpty()) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.rest.package_is_undefined", rest.getName()));
+        }
+
+        for (String packName: rest.getPackages()) {
+            Path packagePath = Path.of(project.getBuild().getOutputDirectory(), packName.replace(".", "/"));
+            if (!Files.isDirectory(packagePath)) {
+                throw new MojoExecutionException(i18n.t("luna.descriptor.rest.package_not_found", packName, packagePath));
+            }
+        }
+    }
+
     private void validateResources(Collection<PluginDescriptor.Resource> resources, Set<String> definedResourcesKey) throws MojoExecutionException {
         if (resources == null) {
             return;
@@ -69,6 +87,8 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             if (resource.getType() == null) {
                 throw new MojoExecutionException(i18n.t("luna.descriptor.resource.property_required", "type"));
             }
+
+
 
             if (Objects.requireNonNull(resource.getType()) == PluginResourceType.I18N) {
                 validateI18NResource(resource);
@@ -173,6 +193,12 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                 if (!Files.isDirectory(packagePath)) {
                     throw new MojoExecutionException(i18n.t("luna.descriptor.scan.package_not_found", pack, packagePath));
                 }
+            }
+        }
+
+        if (descriptor.getRestPackages() != null) {
+            for (PluginDescriptor.Rest rest: descriptor.getRestPackages()) {
+                validateRest(rest);
             }
         }
     }

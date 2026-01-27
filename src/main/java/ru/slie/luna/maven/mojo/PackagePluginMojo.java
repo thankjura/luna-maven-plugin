@@ -54,6 +54,12 @@ public class PackagePluginMojo extends AbstractMojo {
                 if (Artifact.SCOPE_TEST.equals(artifact.getScope()) || Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
                     continue;
                 }
+
+                if ("pom".equals(artifact.getType()) || "pom".equals(artifact.getArtifactHandler().getExtension())) {
+                    continue;
+                }
+
+
                 File file = artifact.getFile();
                 if (file != null && file.isFile()) {
                     getLog().info(i18n.t("luna.package.add_dependency", artifact.getId()));

@@ -17,6 +17,7 @@ public class PluginDescriptor {
     private List<String> scanPackages;
     private List<Resource> resources;
     private List<WebRoute> routes;
+    private List<Rest> restPackages;
     private List<Component> components;
 
     public String getKey() {
@@ -53,6 +54,10 @@ public class PluginDescriptor {
 
     public List<WebRoute> getRoutes() {
         return routes;
+    }
+
+    public List<Rest> getRestPackages() {
+        return restPackages;
     }
 
     public static class Component {
@@ -115,6 +120,22 @@ public class PluginDescriptor {
 
         public String getKey() {
             return key;
+        }
+    }
+
+
+    public static class Rest {
+        @JsonProperty(required = true)
+        private String name;
+        @JsonProperty(required = true)
+        private List<String> packages;
+
+        public String getName() {
+            return name;
+        }
+
+        public List<String> getPackages() {
+            return packages;
         }
     }
 
