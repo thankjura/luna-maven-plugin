@@ -196,6 +196,16 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             }
         }
 
+        if (descriptor.getActiveDocs() != null) {
+            for (String activeDocClass: descriptor.getActiveDocs()) {
+                String classPath = activeDocClass.replace('.', File.separatorChar) + ".class";
+                File classFile = new File(project.getBuild().getOutputDirectory(), classPath);
+                if (!classFile.exists()) {
+                    throw new MojoExecutionException(i18n.t("luna.descriptor.active_docs.class_not_found", activeDocClass));
+                }
+            }
+        }
+
         if (descriptor.getRestPackages() != null) {
             for (PluginDescriptor.Rest rest: descriptor.getRestPackages()) {
                 validateRest(rest);

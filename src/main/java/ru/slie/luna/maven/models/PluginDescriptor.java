@@ -15,6 +15,7 @@ public class PluginDescriptor {
     @JsonProperty(required = true)
     private Vendor vendor;
     private List<String> scanPackages;
+    private List<String> activeDocs;
     private List<Resource> resources;
     private List<WebRoute> routes;
     private List<Rest> restPackages;
@@ -58,6 +59,10 @@ public class PluginDescriptor {
 
     public List<Rest> getRestPackages() {
         return restPackages;
+    }
+
+    public List<String> getActiveDocs() {
+        return activeDocs;
     }
 
     public static class Component {
