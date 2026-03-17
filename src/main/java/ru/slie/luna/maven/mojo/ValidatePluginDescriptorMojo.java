@@ -2,14 +2,13 @@ package ru.slie.luna.maven.mojo;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import ru.slie.luna.maven.I18nResolver;
-import ru.slie.luna.maven.models.PluginDescriptor;
-import ru.slie.luna.maven.models.PluginResourceType;
+import ru.slie.luna.system.plugin.PluginDescriptor;
+import ru.slie.luna.system.plugin.PluginResourceType;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.File;
@@ -130,8 +129,39 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
+    private void validateComponent(PluginDescriptor.Component component, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+        if (component.getKey() == null) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.property_required", "key"));
+        }
+        if (component.getClassName() == null) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.property_required", "className"));
+        }
+
+        if (existsComponentKeys.contains(component.getKey())) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.duplicate.error", component.getKey()));
+        }
+
+        String classPath = component.getClassName().replace('.', File.separatorChar) + ".class";
+        getLog().info(project.getBuild().getOutputDirectory());
+        File classFile = new File(project.getBuild().getOutputDirectory(), classPath);
+        if (!classFile.exists()) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", component.getClassName(), component.getKey()));
+        }
+        existsComponentKeys.add(component.getKey());
+        validateResources(component.getResources(), resourceKeys);
+    }
+
+    private void validateWebComponent(PluginDescriptor.WebComponent webComponent) throws MojoExecutionException {
+        if (webComponent.getPath() != null && !webComponent.getPath().isBlank()) {
+            Path path = Path.of(project.getBuild().getOutputDirectory(), webComponent.getPath());
+            if (!Files.isRegularFile(path)) {
+                throw new MojoExecutionException(i18n.t("luna.descriptor.route.file_not_exists", webComponent.getPath()));
+            }
+        }
+    }
+
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    public void execute() throws MojoExecutionException {
         Path descriptorPath = Paths.get(project.getBuild().getOutputDirectory(), DESCRIPTOR_FILE);
         PluginDescriptor descriptor = new YAMLMapper().readValue(descriptorPath, PluginDescriptor.class);
 
@@ -163,27 +193,45 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         Set<String> resourceKeys = new HashSet<>();
         if (descriptor.getComponents() != null) {
             for (PluginDescriptor.Component component: descriptor.getComponents()) {
-                if (component.getKey() == null) {
-                    throw new MojoExecutionException(i18n.t("luna.descriptor.component.property_required", "key"));
-                }
-                if (component.getClassName() == null) {
-                    throw new MojoExecutionException(i18n.t("luna.descriptor.component.property_required", "className"));
-                }
-
-                if (componentKeys.contains(component.getKey())) {
-                    throw new MojoExecutionException(i18n.t("luna.descriptor.component.duplicate.error", component.getKey()));
-                }
-
-                String classPath = component.getClassName().replace('.', File.separatorChar) + ".class";
-                getLog().info(project.getBuild().getOutputDirectory());
-                File classFile = new File(project.getBuild().getOutputDirectory(), classPath);
-                if (!classFile.exists()) {
-                    throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", component.getClassName(), component.getKey()));
-                }
-                componentKeys.add(component.getKey());
-                validateResources(component.getResources(), resourceKeys);
+                validateComponent(component, componentKeys, resourceKeys);
             }
         }
+
+        if (descriptor.getCustomFieldTypes() != null) {
+            for (PluginDescriptor.CustomFieldType customFieldType: descriptor.getCustomFieldTypes()) {
+                validateComponent(customFieldType, componentKeys, resourceKeys);
+
+                if (customFieldType.getViewComponents() != null) {
+                    for (PluginDescriptor.WebComponent webComponent: customFieldType.getViewComponents()) {
+                        validateWebComponent(webComponent);
+                    }
+                }
+
+                if (customFieldType.getEditComponents() != null) {
+                    for (PluginDescriptor.WebComponent webComponent: customFieldType.getEditComponents()) {
+                        validateWebComponent(webComponent);
+                    }
+                }
+
+                if (customFieldType.getNavigatorComponents() != null) {
+                    for (PluginDescriptor.WebComponent webComponent: customFieldType.getNavigatorComponents()) {
+                        validateWebComponent(webComponent);
+                    }
+                }
+
+                if (customFieldType.getOptionsComponent() != null) {
+                    validateWebComponent(customFieldType.getOptionsComponent());
+                }
+
+                if (customFieldType.getIconPath() != null) {
+                    Path path = Path.of(project.getBuild().getOutputDirectory(), customFieldType.getIconPath());
+                    if (!Files.isRegularFile(path)) {
+                        throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", customFieldType.getIconPath()));
+                    }
+                }
+            }
+        }
+
         validateRoutes(descriptor.getRoutes(), new HashSet<>());
         validateResources(descriptor.getResources(), resourceKeys);
 
