@@ -197,8 +197,8 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             }
         }
 
-        if (descriptor.getCustomFieldTypes() != null) {
-            for (PluginDescriptor.CustomFieldType customFieldType: descriptor.getCustomFieldTypes()) {
+        if (descriptor.getFieldTypes() != null) {
+            for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
                 validateComponent(customFieldType, componentKeys, resourceKeys);
 
                 if (customFieldType.getViewComponents() != null) {
@@ -229,6 +229,12 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                         throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", customFieldType.getIconPath()));
                     }
                 }
+            }
+        }
+
+        if (descriptor.getFieldSearchers() != null) {
+            for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
+                validateComponent(customFieldType, componentKeys, resourceKeys);
             }
         }
 
