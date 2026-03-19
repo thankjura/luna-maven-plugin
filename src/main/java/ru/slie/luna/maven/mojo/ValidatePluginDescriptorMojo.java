@@ -15,10 +15,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import static ru.slie.luna.maven.Constants.DESCRIPTOR_FILE;
 
@@ -152,6 +149,10 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
     }
 
     private void validateWebComponent(PluginDescriptor.WebComponent webComponent) throws MojoExecutionException {
+        if (webComponent == null) {
+            return;
+        }
+
         if (webComponent.getPath() != null && !webComponent.getPath().isBlank()) {
             Path path = Path.of(project.getBuild().getOutputDirectory(), webComponent.getPath());
             if (!Files.isRegularFile(path)) {
@@ -165,6 +166,19 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             for (PluginDescriptor.Component component: components) {
                 validateComponent(component, existsComponentKeys, resourceKeys);
             }
+        }
+    }
+
+    private void validateWorkflowFunctions(List<PluginDescriptor.WorkflowFunction> functions, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+        if (functions == null || functions.isEmpty()) {
+            return;
+        }
+
+        for (PluginDescriptor.WorkflowFunction workflowFunction: functions) {
+            validateComponent(workflowFunction, existsComponentKeys, resourceKeys);
+
+            validateWebComponent(workflowFunction.getViewComponent());
+            validateWebComponent(workflowFunction.getEditComponent());
         }
     }
 
@@ -208,6 +222,10 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys);
         validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys);
 
+        validateWorkflowFunctions(descriptor.getWorkflowConditions(), componentKeys, resourceKeys);
+        validateWorkflowFunctions(descriptor.getWorkflowValidators(), componentKeys, resourceKeys);
+        validateWorkflowFunctions(descriptor.getWorkflowPostfunctions(), componentKeys, resourceKeys);
+
         if (descriptor.getFieldTypes() != null) {
             for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
                 validateComponent(customFieldType, componentKeys, resourceKeys);
@@ -230,9 +248,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                     }
                 }
 
-                if (customFieldType.getOptionsComponent() != null) {
-                    validateWebComponent(customFieldType.getOptionsComponent());
-                }
+                validateWebComponent(customFieldType.getOptionsComponent());
 
                 if (customFieldType.getIconPath() != null) {
                     Path path = Path.of(project.getBuild().getOutputDirectory(), customFieldType.getIconPath());
@@ -240,12 +256,6 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                         throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", customFieldType.getIconPath()));
                     }
                 }
-            }
-        }
-
-        if (descriptor.getFieldSearchers() != null) {
-            for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
-                validateComponent(customFieldType, componentKeys, resourceKeys);
             }
         }
 
