@@ -160,6 +160,14 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
+    private void validateComponents(Collection<? extends PluginDescriptor.Component> components, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+        if (components != null) {
+            for (PluginDescriptor.Component component: components) {
+                validateComponent(component, existsComponentKeys, resourceKeys);
+            }
+        }
+    }
+
     @Override
     public void execute() throws MojoExecutionException {
         Path descriptorPath = Paths.get(project.getBuild().getOutputDirectory(), DESCRIPTOR_FILE);
@@ -191,11 +199,14 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
 
         Set<String> componentKeys = new HashSet<>();
         Set<String> resourceKeys = new HashSet<>();
-        if (descriptor.getComponents() != null) {
-            for (PluginDescriptor.Component component: descriptor.getComponents()) {
-                validateComponent(component, componentKeys, resourceKeys);
-            }
-        }
+        validateComponents(descriptor.getComponents(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getFieldSearchers(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getFilters(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getQueryFunctions(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getWebSections(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getWebSectionProviders(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys);
 
         if (descriptor.getFieldTypes() != null) {
             for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
