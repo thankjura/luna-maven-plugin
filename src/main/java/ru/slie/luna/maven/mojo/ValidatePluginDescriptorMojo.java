@@ -6,12 +6,17 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
 import ru.slie.luna.maven.I18nResolver;
 import ru.slie.luna.system.plugin.PluginDescriptor;
 import ru.slie.luna.system.plugin.PluginResourceType;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,6 +32,27 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}", readonly = true)
     private String buildDirectory;
     private final I18nResolver i18n = new I18nResolver();
+
+    private void validateInterface(File classFile, String requiredInterface) throws MojoExecutionException {
+        try (InputStream is = new FileInputStream(classFile)) {
+            ClassReader reader = new ClassReader(is);
+            final boolean[] hasInterface = {false};
+
+            reader.accept(new ClassVisitor(Opcodes.ASM9) {
+                @Override
+                public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+                    String internalRequired = requiredInterface.replace('.', '/');
+                    hasInterface[0] = Arrays.asList(interfaces).contains(internalRequired);
+                }
+            }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG);
+
+            if (!hasInterface[0]) {
+                throw new MojoExecutionException(i18n.t("luna.description.error.class_must_implemented", classFile.getName(), requiredInterface));
+            }
+        } catch (Exception e) {
+            throw new MojoExecutionException(i18n.t("luna.description.error.failed_to_analyze_file", classFile.getAbsolutePath()), e);
+        }
+    }
 
     private void validateI18NResource(PluginDescriptor.Resource resource) throws MojoExecutionException {
         Path path = Path.of(project.getBuild().getOutputDirectory(), resource.getPath() + ".properties");
@@ -83,8 +109,6 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             if (resource.getType() == null) {
                 throw new MojoExecutionException(i18n.t("luna.descriptor.resource.property_required", "type"));
             }
-
-
 
             if (Objects.requireNonNull(resource.getType()) == PluginResourceType.I18N) {
                 validateI18NResource(resource);
