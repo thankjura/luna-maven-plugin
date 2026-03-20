@@ -5,18 +5,16 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 import ru.slie.luna.maven.I18nResolver;
 import ru.slie.luna.system.plugin.PluginDescriptor;
 import ru.slie.luna.system.plugin.PluginResourceType;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,7 +22,7 @@ import java.util.*;
 
 import static ru.slie.luna.maven.Constants.DESCRIPTOR_FILE;
 
-@Mojo(name = "validate", defaultPhase = LifecyclePhase.PREPARE_PACKAGE, threadSafe = true)
+@Mojo(name = "validate", defaultPhase = LifecyclePhase.PREPARE_PACKAGE, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class ValidatePluginDescriptorMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -33,24 +31,36 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
     private String buildDirectory;
     private final I18nResolver i18n = new I18nResolver();
 
-    private void validateInterface(File classFile, String requiredInterface) throws MojoExecutionException {
-        try (InputStream is = new FileInputStream(classFile)) {
-            ClassReader reader = new ClassReader(is);
-            final boolean[] hasInterface = {false};
+    private ClassLoader projectClassLoader;
 
-            reader.accept(new ClassVisitor(Opcodes.ASM9) {
-                @Override
-                public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                    String internalRequired = requiredInterface.replace('.', '/');
-                    hasInterface[0] = Arrays.asList(interfaces).contains(internalRequired);
+    private ClassLoader getProjectClassLoader() throws MojoExecutionException {
+        if (projectClassLoader == null) {
+            try {
+                List<String> classpathElements = project.getCompileClasspathElements();
+                URL[] urls = new URL[classpathElements.size()];
+
+                for (int i = 0; i < classpathElements.size(); i++) {
+                    urls[i] = new File(classpathElements.get(i)).toURI().toURL();
                 }
-            }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG);
 
-            if (!hasInterface[0]) {
-                throw new MojoExecutionException(i18n.t("luna.description.error.class_must_implemented", classFile.getName(), requiredInterface));
+                projectClassLoader = new URLClassLoader(urls, getClass().getClassLoader());
+            } catch (Exception e) {
+                throw new MojoExecutionException("Не удалось инициализировать ClassLoader проекта", e);
             }
-        } catch (Exception e) {
-            throw new MojoExecutionException(i18n.t("luna.description.error.failed_to_analyze_file", classFile.getAbsolutePath()), e);
+        }
+        return projectClassLoader;
+    }
+
+    private void validateInterface(String componentKey, String className, Class<?> targetInterface) throws MojoExecutionException {
+        try {
+            ClassLoader loader = getProjectClassLoader();
+            Class<?> componentClass = loader.loadClass(className);
+
+            if (!targetInterface.isAssignableFrom(componentClass)) {
+                throw new MojoExecutionException(i18n.t("luna.description.error.class_must_implemented", className, targetInterface.getCanonicalName()));
+            }
+        } catch (ClassNotFoundException e) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", className, componentKey), e);
         }
     }
 
@@ -150,7 +160,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateComponent(PluginDescriptor.Component component, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+    private void validateComponent(PluginDescriptor.Component component, Set<String> existsComponentKeys, Set<String> resourceKeys, Class<?> requiredImpl) throws MojoExecutionException {
         if (component.getKey() == null) {
             throw new MojoExecutionException(i18n.t("luna.descriptor.component.property_required", "key"));
         }
@@ -165,7 +175,10 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         String classPath = component.getClassName().replace('.', File.separatorChar) + ".class";
         getLog().info(project.getBuild().getOutputDirectory());
         File classFile = new File(project.getBuild().getOutputDirectory(), classPath);
-        if (!classFile.exists()) {
+
+        if (requiredImpl != null) {
+            validateInterface(component.getKey(), component.getClassName(), requiredImpl);
+        } else if (!classFile.exists()) {
             throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", component.getClassName(), component.getKey()));
         }
         existsComponentKeys.add(component.getKey());
@@ -185,21 +198,21 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateComponents(Collection<? extends PluginDescriptor.Component> components, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+    private void validateComponents(Collection<? extends PluginDescriptor.Component> components, Set<String> existsComponentKeys, Set<String> resourceKeys, Class<?> requiredImpl) throws MojoExecutionException {
         if (components != null) {
             for (PluginDescriptor.Component component: components) {
-                validateComponent(component, existsComponentKeys, resourceKeys);
+                validateComponent(component, existsComponentKeys, resourceKeys, requiredImpl);
             }
         }
     }
 
-    private void validateWorkflowFunctions(List<PluginDescriptor.WorkflowFunction> functions, Set<String> existsComponentKeys, Set<String> resourceKeys) throws MojoExecutionException {
+    private void validateWorkflowFunctions(List<PluginDescriptor.WorkflowFunction> functions, Set<String> existsComponentKeys, Set<String> resourceKeys, Class<?> requiredImpl) throws MojoExecutionException {
         if (functions == null || functions.isEmpty()) {
             return;
         }
 
         for (PluginDescriptor.WorkflowFunction workflowFunction: functions) {
-            validateComponent(workflowFunction, existsComponentKeys, resourceKeys);
+            validateComponent(workflowFunction, existsComponentKeys, resourceKeys, requiredImpl);
 
             validateWebComponent(workflowFunction.getViewComponent());
             validateWebComponent(workflowFunction.getEditComponent());
@@ -237,22 +250,22 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
 
         Set<String> componentKeys = new HashSet<>();
         Set<String> resourceKeys = new HashSet<>();
-        validateComponents(descriptor.getComponents(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getFieldSearchers(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getFilters(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getQueryFunctions(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getWebSections(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getWebSectionProviders(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys);
-        validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys);
+        validateComponents(descriptor.getComponents(), componentKeys, resourceKeys, null);
+        validateComponents(descriptor.getFieldSearchers(), componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
+        validateComponents(descriptor.getFilters(), componentKeys, resourceKeys, null);
+        validateComponents(descriptor.getQueryFunctions(), componentKeys, resourceKeys, ru.slie.luna.issue.query.func.QueryFunction.class);
+        validateComponents(descriptor.getWebSections(), componentKeys, resourceKeys, ru.slie.luna.web.WebSection.class);
+        validateComponents(descriptor.getWebSectionProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebSectionProvider.class);
+        validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys, ru.slie.luna.web.WebItem.class);
+        validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebItemsProvider.class);
 
-        validateWorkflowFunctions(descriptor.getWorkflowConditions(), componentKeys, resourceKeys);
-        validateWorkflowFunctions(descriptor.getWorkflowValidators(), componentKeys, resourceKeys);
-        validateWorkflowFunctions(descriptor.getWorkflowPostfunctions(), componentKeys, resourceKeys);
+        validateWorkflowFunctions(descriptor.getWorkflowConditions(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.condition.WorkflowCondition.class);
+        validateWorkflowFunctions(descriptor.getWorkflowValidators(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.validator.WorkflowValidator.class);
+        validateWorkflowFunctions(descriptor.getWorkflowPostfunctions(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.postfunction.WorkflowPostfunction.class);
 
         if (descriptor.getFieldTypes() != null) {
             for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
-                validateComponent(customFieldType, componentKeys, resourceKeys);
+                validateComponent(customFieldType, componentKeys, resourceKeys, ru.slie.luna.issue.field.type.FieldType.class);
 
                 if (customFieldType.getViewComponents() != null) {
                     for (PluginDescriptor.WebComponent webComponent: customFieldType.getViewComponents()) {
