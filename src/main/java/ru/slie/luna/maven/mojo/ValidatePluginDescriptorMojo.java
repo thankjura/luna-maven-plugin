@@ -1,5 +1,6 @@
 package ru.slie.luna.maven.mojo;
 
+import jakarta.persistence.Entity;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -13,6 +14,7 @@ import ru.slie.luna.system.plugin.PluginResourceType;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -58,6 +60,20 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
 
             if (!targetInterface.isAssignableFrom(componentClass)) {
                 throw new MojoExecutionException(i18n.t("luna.description.error.class_must_implemented", className, targetInterface.getCanonicalName()));
+            }
+        } catch (ClassNotFoundException e) {
+            throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", className, componentKey), e);
+        }
+    }
+
+    private void validateAnnotation(String componentKey, String className, Class<? extends Annotation> annotationClass) throws MojoExecutionException {
+        try {
+            ClassLoader loader = getProjectClassLoader();
+            Class<?> componentClass = loader.loadClass(className);
+
+            if (!componentClass.isAnnotationPresent(annotationClass)) {
+                throw new MojoExecutionException(i18n.t("luna.description.error.annotation_missing",
+                        className, annotationClass.getCanonicalName()));
             }
         } catch (ClassNotFoundException e) {
             throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", className, componentKey), e);
@@ -257,7 +273,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         validateComponents(descriptor.getWebSections(), componentKeys, resourceKeys, ru.slie.luna.web.WebSection.class);
         validateComponents(descriptor.getWebSectionProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebSectionProvider.class);
         validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys, ru.slie.luna.web.WebItem.class);
-        validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebItemsProvider.class);
+        validateComponents(descriptor.getWebItemProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebItemProvider.class);
 
         validateWorkflowFunctions(descriptor.getWorkflowConditions(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.condition.WorkflowCondition.class);
         validateWorkflowFunctions(descriptor.getWorkflowValidators(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.validator.WorkflowValidator.class);
@@ -315,6 +331,9 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                 if (!classFile.exists()) {
                     throw new MojoExecutionException(i18n.t("luna.descriptor.active_docs.class_not_found", activeDocClass));
                 }
+
+                validateInterface("activeDocs", activeDocClass, ru.slie.luna.regolith.ActiveDocEntity.class);
+                validateAnnotation("activeDocs", activeDocClass, Entity.class);
             }
         }
 
