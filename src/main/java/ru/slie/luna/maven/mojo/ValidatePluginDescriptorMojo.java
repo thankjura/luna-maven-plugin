@@ -312,6 +312,13 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             }
         }
 
+        if (descriptor.getIssuesExportModules() != null) {
+            for (PluginDescriptor.IssuesExportModule exportModule: descriptor.getIssuesExportModules()) {
+                validateComponent(exportModule, componentKeys, resourceKeys, ru.slie.luna.issue.export.IssuesExportModule.class);
+                validateWebComponent(exportModule.getWebComponent());
+            }
+        }
+
         validateRoutes(descriptor.getRoutes(), new HashSet<>());
         validateResources(descriptor.getResources(), resourceKeys);
 
