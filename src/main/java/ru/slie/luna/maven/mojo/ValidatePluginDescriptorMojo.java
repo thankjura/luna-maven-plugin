@@ -87,6 +87,15 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
+    private void validateResourceExists(String resourcePath) throws MojoExecutionException {
+        if (resourcePath != null) {
+            Path path = Path.of(project.getBuild().getOutputDirectory(), resourcePath);
+            if (!Files.isRegularFile(path)) {
+                throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", resourcePath));
+            }
+        }
+    }
+
     private void validateStaticResource(PluginDescriptor.Resource resource) throws MojoExecutionException {
         Path path = Path.of(project.getBuild().getOutputDirectory(), resource.getPath());
         if (!Files.isRegularFile(path)) {
@@ -267,9 +276,9 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         Set<String> componentKeys = new HashSet<>();
         Set<String> resourceKeys = new HashSet<>();
         validateComponents(descriptor.getComponents(), componentKeys, resourceKeys, null);
-        validateComponents(descriptor.getFieldSearchers(), componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
         validateComponents(descriptor.getFilters(), componentKeys, resourceKeys, null);
         validateComponents(descriptor.getQueryFunctions(), componentKeys, resourceKeys, ru.slie.luna.issue.query.func.QueryFunction.class);
+        validateComponents(descriptor.getClauseValueProviders(), componentKeys, resourceKeys, ru.slie.luna.issue.query.value.ClauseValueProvider.class);
         validateComponents(descriptor.getWebSections(), componentKeys, resourceKeys, ru.slie.luna.web.WebSection.class);
         validateComponents(descriptor.getWebSectionProviders(), componentKeys, resourceKeys, ru.slie.luna.web.WebSectionProvider.class);
         validateComponents(descriptor.getWebItems(), componentKeys, resourceKeys, ru.slie.luna.web.WebItem.class);
@@ -302,13 +311,14 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                 }
 
                 validateWebComponent(customFieldType.getOptionsComponent());
+                validateResourceExists(customFieldType.getIconPath());
+            }
+        }
 
-                if (customFieldType.getIconPath() != null) {
-                    Path path = Path.of(project.getBuild().getOutputDirectory(), customFieldType.getIconPath());
-                    if (!Files.isRegularFile(path)) {
-                        throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", customFieldType.getIconPath()));
-                    }
-                }
+        if (descriptor.getFieldSearchers() != null) {
+            for (PluginDescriptor.FieldSearcher customFieldSearcher: descriptor.getFieldSearchers()) {
+                validateComponent(customFieldSearcher, componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
+                validateWebComponent(customFieldSearcher.getEditComponent());
             }
         }
 
@@ -316,6 +326,29 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             for (PluginDescriptor.IssuesExportModule exportModule: descriptor.getIssuesExportModules()) {
                 validateComponent(exportModule, componentKeys, resourceKeys, ru.slie.luna.issue.export.IssuesExportModule.class);
                 validateWebComponent(exportModule.getWebComponent());
+            }
+        }
+
+        if (descriptor.getReportModules() != null) {
+            for (PluginDescriptor.ReportModule reportModule: descriptor.getReportModules()) {
+                validateComponent(reportModule, componentKeys, resourceKeys, ru.slie.luna.report.ReportModule.class);
+                validateWebComponent(reportModule.getWebComponent());
+                validateResourceExists(reportModule.getThumbnailPath());
+            }
+        }
+
+        if (descriptor.getDirectoryTypes() != null) {
+            for (PluginDescriptor.DirectoryType directoryType: descriptor.getDirectoryTypes()) {
+                validateComponent(directoryType, componentKeys, resourceKeys, ru.slie.luna.directory.DirectoryType.class);
+                validateWebComponent(directoryType.getWebComponent());
+            }
+        }
+
+        if (descriptor.getBulkActions() != null) {
+            for (PluginDescriptor.BulkAction bulkAction: descriptor.getBulkActions()) {
+                validateComponent(bulkAction, componentKeys, resourceKeys, ru.slie.luna.issue.bulk.BulkAction.class);
+                validateWebComponent(bulkAction.getParamsComponent());
+                validateWebComponent(bulkAction.getConfirmComponent());
             }
         }
 
