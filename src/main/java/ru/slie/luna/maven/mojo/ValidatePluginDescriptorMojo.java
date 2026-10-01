@@ -240,7 +240,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             validateComponent(workflowFunction, existsComponentKeys, resourceKeys, requiredImpl);
 
             validateWebComponent(workflowFunction.getViewComponent());
-            validateWebComponent(workflowFunction.getEditComponent());
+            validateWebComponent(workflowFunction.getFormComponent());
         }
     }
 
@@ -298,8 +298,8 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                     }
                 }
 
-                if (customFieldType.getEditComponents() != null) {
-                    for (PluginDescriptor.WebComponent webComponent: customFieldType.getEditComponents()) {
+                if (customFieldType.getFormComponents() != null) {
+                    for (PluginDescriptor.WebComponent webComponent: customFieldType.getFormComponents()) {
                         validateWebComponent(webComponent);
                     }
                 }
@@ -318,7 +318,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         if (descriptor.getFieldSearchers() != null) {
             for (PluginDescriptor.FieldSearcher customFieldSearcher: descriptor.getFieldSearchers()) {
                 validateComponent(customFieldSearcher, componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
-                validateWebComponent(customFieldSearcher.getEditComponent());
+                validateWebComponent(customFieldSearcher.getFormComponent());
             }
         }
 
