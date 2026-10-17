@@ -315,6 +315,13 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             }
         }
 
+        if (descriptor.getWebPanels() != null) {
+            for (PluginDescriptor.WebPanelComp component : descriptor.getWebPanels()) {
+                validateComponent(component, componentKeys, resourceKeys, ru.slie.luna.web.WebPanel.class);
+                validateWebComponent(component.getWebComponent());
+            }
+        }
+
         if (descriptor.getFieldSearchers() != null) {
             for (PluginDescriptor.FieldSearcherComp customFieldSearcher: descriptor.getFieldSearchers()) {
                 validateComponent(customFieldSearcher, componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
