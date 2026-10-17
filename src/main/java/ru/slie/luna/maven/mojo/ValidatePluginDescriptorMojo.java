@@ -103,7 +103,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateRest(PluginDescriptor.Rest rest) throws MojoExecutionException {
+    private void validateRest(PluginDescriptor.RestComp rest) throws MojoExecutionException {
         if (rest.getName() == null || rest.getName().trim().isEmpty()) {
             throw new MojoExecutionException(i18n.t("luna.descriptor.rest.name_is_undefined"));
         }
@@ -153,12 +153,12 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateRoutes(Collection<PluginDescriptor.WebRoute> routes, Set<String> existsRouteNames) throws MojoExecutionException {
+    private void validateRoutes(Collection<PluginDescriptor.WebRouteComp> routes, Set<String> existsRouteNames) throws MojoExecutionException {
         if (routes == null) {
             return;
         }
 
-        for (PluginDescriptor.WebRoute route: routes) {
+        for (PluginDescriptor.WebRouteComp route: routes) {
             if (route.getRouteName() == null) {
                 throw new MojoExecutionException(i18n.t("luna.descriptor.route.property_required", "routeName"));
             }
@@ -231,12 +231,12 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateWorkflowFunctions(List<PluginDescriptor.WorkflowFunction> functions, Set<String> existsComponentKeys, Set<String> resourceKeys, Class<?> requiredImpl) throws MojoExecutionException {
+    private void validateWorkflowFunctions(List<PluginDescriptor.WorkflowFunctionComp> functions, Set<String> existsComponentKeys, Set<String> resourceKeys, Class<?> requiredImpl) throws MojoExecutionException {
         if (functions == null || functions.isEmpty()) {
             return;
         }
 
-        for (PluginDescriptor.WorkflowFunction workflowFunction: functions) {
+        for (PluginDescriptor.WorkflowFunctionComp workflowFunction: functions) {
             validateComponent(workflowFunction, existsComponentKeys, resourceKeys, requiredImpl);
 
             validateWebComponent(workflowFunction.getViewComponent());
@@ -289,7 +289,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         validateWorkflowFunctions(descriptor.getWorkflowPostfunctions(), componentKeys, resourceKeys, ru.slie.luna.issue.workflow.postfunction.WorkflowPostfunction.class);
 
         if (descriptor.getFieldTypes() != null) {
-            for (PluginDescriptor.FieldType customFieldType: descriptor.getFieldTypes()) {
+            for (PluginDescriptor.FieldTypeComp customFieldType: descriptor.getFieldTypes()) {
                 validateComponent(customFieldType, componentKeys, resourceKeys, ru.slie.luna.issue.field.type.FieldType.class);
 
                 if (customFieldType.getViewComponents() != null) {
@@ -316,21 +316,21 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
 
         if (descriptor.getFieldSearchers() != null) {
-            for (PluginDescriptor.FieldSearcher customFieldSearcher: descriptor.getFieldSearchers()) {
+            for (PluginDescriptor.FieldSearcherComp customFieldSearcher: descriptor.getFieldSearchers()) {
                 validateComponent(customFieldSearcher, componentKeys, resourceKeys, ru.slie.luna.issue.field.searcher.FieldSearcher.class);
                 validateWebComponent(customFieldSearcher.getFormComponent());
             }
         }
 
         if (descriptor.getIssuesExportModules() != null) {
-            for (PluginDescriptor.IssuesExportModule exportModule: descriptor.getIssuesExportModules()) {
+            for (PluginDescriptor.IssuesExportModuleComp exportModule: descriptor.getIssuesExportModules()) {
                 validateComponent(exportModule, componentKeys, resourceKeys, ru.slie.luna.issue.export.IssuesExportModule.class);
                 validateWebComponent(exportModule.getWebComponent());
             }
         }
 
         if (descriptor.getReportModules() != null) {
-            for (PluginDescriptor.ReportModule reportModule: descriptor.getReportModules()) {
+            for (PluginDescriptor.ReportModuleComp reportModule: descriptor.getReportModules()) {
                 validateComponent(reportModule, componentKeys, resourceKeys, ru.slie.luna.report.ReportModule.class);
                 validateWebComponent(reportModule.getWebComponent());
                 validateResourceExists(reportModule.getThumbnailPath());
@@ -338,14 +338,14 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
 
         if (descriptor.getDirectoryTypes() != null) {
-            for (PluginDescriptor.DirectoryType directoryType: descriptor.getDirectoryTypes()) {
+            for (PluginDescriptor.DirectoryTypeComp directoryType: descriptor.getDirectoryTypes()) {
                 validateComponent(directoryType, componentKeys, resourceKeys, ru.slie.luna.directory.DirectoryType.class);
                 validateWebComponent(directoryType.getWebComponent());
             }
         }
 
         if (descriptor.getBulkActions() != null) {
-            for (PluginDescriptor.BulkAction bulkAction: descriptor.getBulkActions()) {
+            for (PluginDescriptor.BulkActionComp bulkAction: descriptor.getBulkActions()) {
                 validateComponent(bulkAction, componentKeys, resourceKeys, ru.slie.luna.issue.bulk.BulkAction.class);
                 validateWebComponent(bulkAction.getParamsComponent());
                 validateWebComponent(bulkAction.getConfirmComponent());
@@ -378,7 +378,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
 
         if (descriptor.getRestPackages() != null) {
-            for (PluginDescriptor.Rest rest: descriptor.getRestPackages()) {
+            for (PluginDescriptor.RestComp rest: descriptor.getRestPackages()) {
                 validateRest(rest);
             }
         }
