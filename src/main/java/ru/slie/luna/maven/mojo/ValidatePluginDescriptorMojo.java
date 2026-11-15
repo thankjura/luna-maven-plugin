@@ -59,7 +59,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             Class<?> componentClass = loader.loadClass(className);
 
             if (!targetInterface.isAssignableFrom(componentClass)) {
-                throw new MojoExecutionException(i18n.t("luna.description.error.class_must_implemented", className, targetInterface.getCanonicalName()));
+                throw new MojoExecutionException(i18n.t("luna.descriptor.error.class_must_implemented", className, targetInterface.getCanonicalName()));
             }
         } catch (ClassNotFoundException e) {
             throw new MojoExecutionException(i18n.t("luna.descriptor.component.class_not_found", className, componentKey), e);
@@ -72,7 +72,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             Class<?> componentClass = loader.loadClass(className);
 
             if (!componentClass.isAnnotationPresent(annotationClass)) {
-                throw new MojoExecutionException(i18n.t("luna.description.error.annotation_missing",
+                throw new MojoExecutionException(i18n.t("luna.descriptor.error.annotation_missing",
                         className, annotationClass.getCanonicalName()));
             }
         } catch (ClassNotFoundException e) {
@@ -358,6 +358,8 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
                 validateWebComponent(bulkAction.getConfirmComponent());
             }
         }
+
+        validateComponents(descriptor.getProjectImportParticipants(), componentKeys, resourceKeys, ru.slie.luna.system.restore.project.ProjectImportParticipant.class);
 
         validateRoutes(descriptor.getRoutes(), new HashSet<>());
         validateResources(descriptor.getResources(), resourceKeys);
