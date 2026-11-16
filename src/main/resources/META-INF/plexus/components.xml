@@ -31,6 +31,9 @@
                                 ru.slie.luna.maven:luna-maven-plugin:compile,
                                 ru.slie.luna.maven:luna-maven-plugin:validate
                             </compile>
+                            <process-test-resources>org.apache.maven.plugins:maven-resources-plugin:3.4.0:testResources</process-test-resources>
+                            <test-compile>org.apache.maven.plugins:maven-compiler-plugin:3.14.1:testCompile</test-compile>
+                            <test>org.apache.maven.plugins:maven-surefire-plugin:3.5.4:test</test>
                             <package>ru.slie.luna.maven:luna-maven-plugin:luna-package</package>
                             <install>org.apache.maven.plugins:maven-install-plugin:3.1.4:install</install>
                         </phases>
