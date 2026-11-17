@@ -88,15 +88,6 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
         }
     }
 
-    private void validateResourceExists(String resourcePath) throws MojoExecutionException {
-        if (resourcePath != null) {
-            Path path = Path.of(project.getBuild().getOutputDirectory(), resourcePath);
-            if (!Files.isRegularFile(path)) {
-                throw new MojoExecutionException(i18n.t("luna.descriptor.file_not_exists", resourcePath));
-            }
-        }
-    }
-
     private void validateStaticResource(PluginDescriptor.Resource resource) throws MojoExecutionException {
         Path path = Path.of(project.getBuild().getOutputDirectory(), resource.getPath());
         if (!Files.isRegularFile(path)) {
@@ -364,7 +355,7 @@ public class ValidatePluginDescriptorMojo extends AbstractMojo {
             for (PluginDescriptor.ReportModuleComp reportModule: descriptor.getReportModules()) {
                 validateComponent(reportModule, componentKeys, resourceKeys, ru.slie.luna.report.ReportModule.class);
                 validateWebComponent(reportModule.getWebComponent(), reportModule.getKey(), "webComponent");
-                validateResourceExists(reportModule.getThumbnailPath());
+                validateWebComponent(reportModule.getPreviewComponent(), reportModule.getKey(), "previewComponent");
             }
         }
 
