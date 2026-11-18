@@ -23,6 +23,7 @@
                         <id>default</id>
                         <phases>
                             <process-resources>
+                                ru.slie.luna.maven:luna-maven-plugin:sync-resources,
                                 org.apache.maven.plugins:maven-resources-plugin:3.4.0:resources,
                                 ru.slie.luna.maven:luna-maven-plugin:process
                             </process-resources>
